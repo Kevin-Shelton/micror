@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/server'
 import OpportunitiesTable from '@/components/OpportunitiesTable'
 import StatsCards from '@/components/StatsCards'
@@ -93,6 +94,12 @@ export default async function Dashboard({
               </p>
             </div>
             <div className="flex gap-3">
+              <Link
+                href="/niches"
+                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+              >
+                Niches
+              </Link>
               <a
                 href={`/api/scrape?secret=${process.env.CRON_SECRET}&force=true`}
                 target="_blank"
