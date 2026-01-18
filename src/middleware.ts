@@ -23,6 +23,12 @@ export function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
+    // Check for secret in query parameter (for browser testing)
+    const querySecret = request.nextUrl.searchParams.get('secret')
+    if (querySecret === process.env.CRON_SECRET) {
+      return NextResponse.next()
+    }
+
     // In development, allow unauthenticated access for testing
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.next()
