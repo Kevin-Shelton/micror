@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { analyzePost, AIProvider } from '@/lib/ai/analyzer'
-import { matchesNiche, getNicheBoost } from '@/lib/niches'
+import { getNichesFromDB, matchesNicheSync, getNicheBoost } from '@/lib/niches'
 
 export const maxDuration = 120 // Allow up to 2 minutes for analysis
 
@@ -41,10 +41,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Fetch niches from database
+  const niches = await getNichesFromDB()
+
   // Sort posts by niche match priority, then by score
   const posts = (allPosts || [])
     .map(post => {
-      const nicheMatch = matchesNiche((post.title || '') + ' ' + (post.body || ''))
+      const nicheMatch = matchesNicheSync((post.title || '') + ' ' + (post.body || ''), niches)
       return {
         ...post,
         nicheMatch,
