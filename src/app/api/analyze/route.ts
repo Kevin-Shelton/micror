@@ -9,7 +9,14 @@ export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   const isVercelCron = request.headers.get('x-vercel-cron') === '1'
 
-  if (!isVercelCron && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Allow secret via query param for browser testing
+  const { searchParams } = new URL(request.url)
+  const querySecret = searchParams.get('secret')
+
+  const hasValidSecret = authHeader === `Bearer ${process.env.CRON_SECRET}` ||
+                         querySecret === process.env.CRON_SECRET
+
+  if (!isVercelCron && !hasValidSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
