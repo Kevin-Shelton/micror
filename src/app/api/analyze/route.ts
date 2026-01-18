@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { analyzePost, AIProvider } from '@/lib/ai/analyzer'
+import { matchesNiche, getNicheBoost } from '@/lib/niches'
 
 export const maxDuration = 120 // Allow up to 2 minutes for analysis
 
@@ -28,23 +29,42 @@ export async function POST(request: NextRequest) {
   }
 
   // Get unprocessed posts that might be opportunities
-  const { data: posts, error } = await supabase
+  const { data: allPosts, error } = await supabase
     .from('raw_posts')
     .select('*')
     .eq('is_processed', false)
     .is('is_opportunity', null)
     .order('score', { ascending: false })
-    .limit(limit)
+    .limit(limit * 3) // Fetch more to allow for niche prioritization
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Sort posts by niche match priority, then by score
+  const posts = (allPosts || [])
+    .map(post => {
+      const nicheMatch = matchesNiche((post.title || '') + ' ' + (post.body || ''))
+      return {
+        ...post,
+        nicheMatch,
+        nicheBoost: getNicheBoost(nicheMatch.highestPriority),
+      }
+    })
+    .sort((a, b) => {
+      // First sort by niche boost (higher first)
+      if (b.nicheBoost !== a.nicheBoost) return b.nicheBoost - a.nicheBoost
+      // Then by score
+      return (b.score || 0) - (a.score || 0)
+    })
+    .slice(0, limit)
+
   const results = {
     processed: 0,
     opportunities_found: 0,
+    niche_matches: 0,
     errors: 0,
-    details: [] as { post_id: string; status: string; opportunity_id?: string }[],
+    details: [] as { post_id: string; status: string; opportunity_id?: string; niches?: string[] }[],
   }
 
   // Alternate between Claude and OpenAI for load balancing
@@ -85,10 +105,12 @@ export async function POST(request: NextRequest) {
 
         if (!insertError && opportunity) {
           results.opportunities_found++
+          if (post.nicheMatch.matches) results.niche_matches++
           results.details.push({
             post_id: post.id,
             status: 'opportunity_created',
             opportunity_id: opportunity.id,
+            niches: post.nicheMatch.niches,
           })
         }
 
