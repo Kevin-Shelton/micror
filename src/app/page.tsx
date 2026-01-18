@@ -94,14 +94,14 @@ export default async function Dashboard({
             </div>
             <div className="flex gap-3">
               <a
-                href="/api/scrape"
+                href={`/api/scrape?secret=${process.env.CRON_SECRET}&force=true`}
                 target="_blank"
                 className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
               >
                 Run Scraper
               </a>
               <a
-                href="/api/analyze"
+                href={`/api/analyze?secret=${process.env.CRON_SECRET}`}
                 target="_blank"
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
