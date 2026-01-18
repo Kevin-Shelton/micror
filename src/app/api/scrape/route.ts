@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient()
 
+  // Check for force parameter to skip timing checks
+  const force = searchParams.get('force') === 'true'
+
   // Get active sources due for scraping
   const { data: sources, error } = await supabase
     .from('sources')
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
       : new Date(0)
     const hoursAgo = (Date.now() - lastScraped.getTime()) / (1000 * 60 * 60)
 
-    if (hoursAgo < source.scrape_frequency_hours) {
+    if (!force && hoursAgo < source.scrape_frequency_hours) {
       results.push({ source: source.display_name, skipped: true, reason: 'Not due yet' })
       continue
     }
